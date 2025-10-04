@@ -34,6 +34,11 @@ class SearchType(Enum):
     ytsearch = "ytsearch"
     ytmsearch = "ytmsearch"
     scsearch = "scsearch"
+    other = "other"
+
+    @classmethod
+    def _missing_(cls, value: object) -> "SearchType":  # type: ignore[override]
+        return cls.other
 
     def __str__(self) -> str:
         return self.value
@@ -68,7 +73,7 @@ class TrackType(Enum):
     OTHER = "other"
 
     @classmethod
-    def _missing_(cls, _: object) -> "TrackType":
+    def _missing_(cls, value: object) -> "TrackType":  # type: ignore[override]
         return cls.OTHER
 
     def __str__(self) -> str:
@@ -98,7 +103,7 @@ class PlaylistType(Enum):
     OTHER = "other"
 
     @classmethod
-    def _missing_(cls, _: object) -> "PlaylistType":
+    def _missing_(cls, value: object) -> "PlaylistType":  # type: ignore[override]
         return cls.OTHER
 
     def __str__(self) -> str:
@@ -213,8 +218,12 @@ class URLRegex:
 
     """
 
+    # Spotify share links can include query parameters like ?si=XXXX, a trailing slash,
+    # or an intl locale segment (e.g. /intl-en/). Broaden the regex so we still capture
+    # the type and id while ignoring extra parameters. This prevents the URL from being
+    # treated as a generic Lavalink identifier and ensures internal Spotify handling runs.
     SPOTIFY_URL = re.compile(
-        r"https?://open.spotify.com/(?P<type>album|playlist|track|artist)/(?P<id>[a-zA-Z0-9]+)",
+        r"https?://open\.spotify\.com/(?:intl-[a-zA-Z-]+/)?(?P<type>album|playlist|track|artist)/(?P<id>[a-zA-Z0-9]+)(?:/)?(?:\?.*)?$",
     )
 
     DISCORD_MP3_URL = re.compile(
@@ -235,14 +244,17 @@ class URLRegex:
         r"(?P<video>^.*?)(\?t|&start)=(?P<time>\d+)?.*",
     )
 
+    # Apple Music links sometimes append additional query parameters (e.g. &l=en, &uo=4).
+    # Allow arbitrary query parameters so valid links are captured and parsed.
     AM_URL = re.compile(
-        r"https?://music.apple.com/(?P<country>[a-zA-Z]{2})/"
-        r"(?P<type>album|playlist|song|artist)/(?P<name>.+)/(?P<id>[^?]+)",
+        r"https?://music\.apple\.com/(?P<country>[a-zA-Z]{2})/"
+        r"(?P<type>album|playlist|song|artist)/(?P<name>.+?)/(?P<id>[^/?]+?)(?:/)?(?:\?.*)?$",
     )
 
+    # Single-in-album links may also carry extra query params beyond the ?i=<trackid> token.
     AM_SINGLE_IN_ALBUM_REGEX = re.compile(
-        r"https?://music.apple.com/(?P<country>[a-zA-Z]{2})/(?P<type>album|playlist|song|artist)/"
-        r"(?P<name>.+)/(?P<id>.+)(\?i=)(?P<id2>.+)",
+        r"https?://music\.apple\.com/(?P<country>[a-zA-Z]{2})/(?P<type>album|playlist|song|artist)/"
+        r"(?P<name>.+)/(?P<id>[^/?]+)(\?i=)(?P<id2>[^&]+)(?:&.*)?$",
     )
 
     SOUNDCLOUD_URL = re.compile(

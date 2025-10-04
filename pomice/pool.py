@@ -21,7 +21,12 @@ import orjson as json
 from discord import Client
 from discord.ext import commands
 from discord.utils import MISSING
-from websockets import client
+
+try:
+    from websockets.legacy import client  # websockets >= 10.0
+except ImportError:
+    import websockets.client as client  # websockets < 10.0  # type: ignore
+
 from websockets import exceptions
 from websockets import typing as wstype
 
@@ -303,7 +308,7 @@ class Node:
         if not self._resume_key:
             return
 
-        data = {"timeout": self._resume_timeout}
+        data: Dict[str, Union[int, str, bool]] = {"timeout": self._resume_timeout}
 
         if self._version.major == 3:
             data["resumingKey"] = self._resume_key
@@ -444,7 +449,17 @@ class Node:
         start = time.perf_counter()
 
         if not self._session:
-            self._session = aiohttp.ClientSession()
+            # Configure connection pooling for optimal concurrent request performance
+            connector = aiohttp.TCPConnector(
+                limit=100,  # Total connection limit
+                limit_per_host=30,  # Per-host connection limit
+                ttl_dns_cache=300,  # DNS cache TTL in seconds
+            )
+            timeout = aiohttp.ClientTimeout(total=30, connect=10)
+            self._session = aiohttp.ClientSession(
+                connector=connector,
+                timeout=timeout,
+            )
 
         try:
             if not reconnect:
@@ -463,7 +478,7 @@ class Node:
                         f"Version check from Node {self._identifier} successful. Returned version {version}",
                     )
 
-            self._websocket = await client.connect(
+            self._websocket = await client.connect(  # type: ignore
                 f"{self._websocket_uri}/v{self._version.major}/websocket",
                 extra_headers=self._headers,
                 ping_interval=self._heartbeat,
@@ -560,7 +575,7 @@ class Node:
         query: str,
         *,
         ctx: Optional[commands.Context] = None,
-        search_type: SearchType | None = SearchType.ytsearch,
+        search_type: Optional[SearchType] = SearchType.ytsearch,
         filters: Optional[List[Filter]] = None,
     ) -> Optional[Union[Playlist, List[Track]]]:
         """Fetches tracks from the node's REST api to parse into Lavalink.
@@ -595,7 +610,7 @@ class Node:
                         track_id=apple_music_results.id,
                         ctx=ctx,
                         track_type=TrackType.APPLE_MUSIC,
-                        search_type=search_type,
+                        search_type=search_type or SearchType.ytsearch,
                         filters=filters,
                         info={
                             "title": apple_music_results.name,
@@ -617,7 +632,7 @@ class Node:
                     track_id=track.id,
                     ctx=ctx,
                     track_type=TrackType.APPLE_MUSIC,
-                    search_type=search_type,
+                    search_type=search_type or SearchType.ytsearch,
                     filters=filters,
                     info={
                         "title": track.name,
@@ -655,7 +670,7 @@ class Node:
                         track_id=spotify_results.id,
                         ctx=ctx,
                         track_type=TrackType.SPOTIFY,
-                        search_type=search_type,
+                        search_type=search_type or SearchType.ytsearch,
                         filters=filters,
                         info={
                             "title": spotify_results.name,
@@ -677,7 +692,7 @@ class Node:
                     track_id=track.id,
                     ctx=ctx,
                     track_type=TrackType.SPOTIFY,
-                    search_type=search_type,
+                    search_type=search_type or SearchType.ytsearch,
                     filters=filters,
                     info={
                         "title": track.name,

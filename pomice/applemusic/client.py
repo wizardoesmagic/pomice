@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 import re
 from datetime import datetime
+from typing import AsyncGenerator
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Union
 
 import aiohttp
@@ -17,10 +20,10 @@ from .objects import *
 __all__ = ("Client",)
 
 AM_URL_REGEX = re.compile(
-    r"https?://music.apple.com/(?P<country>[a-zA-Z]{2})/(?P<type>album|playlist|song|artist)/(?P<name>.+)/(?P<id>[^?]+)",
+    r"https?://music\.apple\.com/(?P<country>[a-zA-Z]{2})/(?P<type>album|playlist|song|artist)/(?P<name>.+?)/(?P<id>[^/?]+?)(?:/)?(?:\?.*)?$",
 )
 AM_SINGLE_IN_ALBUM_REGEX = re.compile(
-    r"https?://music.apple.com/(?P<country>[a-zA-Z]{2})/(?P<type>album|playlist|song|artist)/(?P<name>.+)/(?P<id>.+)(\?i=)(?P<id2>.+)",
+    r"https?://music\.apple\.com/(?P<country>[a-zA-Z]{2})/(?P<type>album|playlist|song|artist)/(?P<name>.+)/(?P<id>[^/?]+)(\?i=)(?P<id2>[^&]+)(?:&.*)?$",
 )
 
 AM_SCRIPT_REGEX = re.compile(r'<script.*?src="(/assets/index-.*?)"')
@@ -35,12 +38,14 @@ class Client:
     and translating it to a valid Lavalink track. No client auth is required here.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, playlist_concurrency: int = 6) -> None:
         self.expiry: datetime = datetime(1970, 1, 1)
         self.token: str = ""
         self.headers: Dict[str, str] = {}
         self.session: aiohttp.ClientSession = None  # type: ignore
         self._log = logging.getLogger(__name__)
+        # Concurrency knob for parallel playlist page retrieval
+        self._playlist_concurrency = max(1, playlist_concurrency)
 
     async def _set_session(self, session: aiohttp.ClientSession) -> None:
         self.session = session
@@ -167,25 +172,127 @@ class Client:
                     "This playlist is empty and therefore cannot be queued.",
                 )
 
-            _next = track_data.get("next")
-            if _next:
-                next_page_url = AM_BASE_URL + _next
+            # Apple Music uses cursor pagination with 'next'. We'll fetch subsequent pages
+            # concurrently by first collecting cursors in rolling waves.
+            next_cursor = track_data.get("next")
+            semaphore = asyncio.Semaphore(self._playlist_concurrency)
 
-                while next_page_url is not None:
-                    resp = await self.session.get(next_page_url, headers=self.headers)
-
+            async def fetch_page(url: str) -> List[Song]:
+                async with semaphore:
+                    resp = await self.session.get(url, headers=self.headers)
                     if resp.status != 200:
-                        raise AppleMusicRequestException(
-                            f"Error while fetching results: {resp.status} {resp.reason}",
-                        )
+                        if self._log:
+                            self._log.warning(
+                                f"Apple Music page fetch failed {resp.status} {resp.reason} for {url}",
+                            )
+                        return []
+                    pj: dict = await resp.json(loads=json.loads)
+                    songs = [Song(track) for track in pj.get("data", [])]
+                    # Return songs; we will look for pj.get('next') in streaming iterator variant
+                    return songs, pj.get("next")  # type: ignore
 
-                    next_data: dict = await resp.json(loads=json.loads)
-                    album_tracks.extend(Song(track) for track in next_data["data"])
+            # We'll implement a wave-based approach similar to Spotify but need to follow cursors.
+            # Because we cannot know all cursors upfront, we'll iteratively fetch waves.
+            waves: List[List[Song]] = []
+            cursors: List[str] = []
+            if next_cursor:
+                cursors.append(next_cursor)
 
-                    _next = next_data.get("next")
-                    if _next:
-                        next_page_url = AM_BASE_URL + _next
-                    else:
-                        next_page_url = None
+            # Limit total waves to avoid infinite loops in malformed responses
+            max_waves = 50
+            wave_size = self._playlist_concurrency * 2
+            wave_counter = 0
+            while cursors and wave_counter < max_waves:
+                current = cursors[:wave_size]
+                cursors = cursors[wave_size:]
+                tasks = [
+                    fetch_page(AM_BASE_URL + cursor) for cursor in current  # type: ignore[arg-type]
+                ]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for res in results:
+                    if isinstance(res, tuple):  # (songs, next)
+                        songs, nxt = res
+                        if songs:
+                            waves.append(songs)
+                        if nxt:
+                            cursors.append(nxt)
+                wave_counter += 1
+
+            for w in waves:
+                album_tracks.extend(w)
 
             return Playlist(data, album_tracks)
+
+    async def iter_playlist_tracks(
+        self,
+        *,
+        query: str,
+        batch_size: int = 100,
+    ) -> AsyncGenerator[List[Song], None]:
+        """Stream Apple Music playlist tracks in batches.
+
+        Parameters
+        ----------
+        query: str
+            Apple Music playlist URL.
+        batch_size: int
+            Logical grouping size for yielded batches.
+        """
+        if not self.token or datetime.utcnow() > self.expiry:
+            await self.request_token()
+
+        result = AM_URL_REGEX.match(query)
+        if not result or result.group("type") != "playlist":
+            raise InvalidAppleMusicURL("Provided query is not a valid Apple Music playlist URL.")
+
+        country = result.group("country")
+        playlist_id = result.group("id")
+        request_url = AM_REQ_URL.format(country=country, type="playlist", id=playlist_id)
+        resp = await self.session.get(request_url, headers=self.headers)
+        if resp.status != 200:
+            raise AppleMusicRequestException(
+                f"Error while fetching results: {resp.status} {resp.reason}",
+            )
+        data: dict = await resp.json(loads=json.loads)
+        playlist_data = data["data"][0]
+        track_data: dict = playlist_data["relationships"]["tracks"]
+
+        first_page_tracks = [Song(track) for track in track_data["data"]]
+        for i in range(0, len(first_page_tracks), batch_size):
+            yield first_page_tracks[i : i + batch_size]
+
+        next_cursor = track_data.get("next")
+        semaphore = asyncio.Semaphore(self._playlist_concurrency)
+
+        async def fetch(cursor: str) -> tuple[List[Song], Optional[str]]:
+            url = AM_BASE_URL + cursor
+            async with semaphore:
+                r = await self.session.get(url, headers=self.headers)
+                if r.status != 200:
+                    if self._log:
+                        self._log.warning(
+                            f"Skipping Apple Music page due to {r.status} {r.reason}",
+                        )
+                    return [], None
+                pj: dict = await r.json(loads=json.loads)
+                songs = [Song(track) for track in pj.get("data", [])]
+                return songs, pj.get("next")
+
+        # Rolling waves of fetches following cursor chain
+        max_waves = 50
+        wave_size = self._playlist_concurrency * 2
+        waves = 0
+        cursors: List[str] = []
+        if next_cursor:
+            cursors.append(next_cursor)
+        while cursors and waves < max_waves:
+            current = cursors[:wave_size]
+            cursors = cursors[wave_size:]
+            results = await asyncio.gather(*[fetch(c) for c in current])
+            for songs, nxt in results:
+                if songs:
+                    for j in range(0, len(songs), batch_size):
+                        yield songs[j : j + batch_size]
+                if nxt:
+                    cursors.append(nxt)
+            waves += 1
