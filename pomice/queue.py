@@ -348,7 +348,7 @@ class Queue(Iterable[Track]):
 
     def move(self, from_index: int, to_index: int) -> None:
         """Moves a track from one spot in the queue to another.
-        
+
         Parameters
         ----------
         from_index: int
@@ -357,8 +357,8 @@ class Queue(Iterable[Track]):
             Where you want to put the track.
         """
         if from_index == to_index:
-             return
-             
+            return
+
         track = self._queue.pop(from_index)
         self._queue.insert(to_index, track)
 
@@ -369,12 +369,12 @@ class Queue(Iterable[Track]):
         initial_count = len(self._queue)
         seen_ids = set()
         unique_queue = []
-        
+
         for track in self._queue:
             if track.track_id not in seen_ids:
                 unique_queue.append(track)
                 seen_ids.add(track.track_id)
-        
+
         self._queue = unique_queue
         return initial_count - len(self._queue)
 

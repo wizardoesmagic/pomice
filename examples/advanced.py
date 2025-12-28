@@ -315,7 +315,7 @@ class Music(commands.Cog):
             player.loop_mode = pomice.LoopMode.QUEUE
         else:
             player.loop_mode = None
-            
+
         await ctx.send(f"Loop mode set to **{mode}**")
 
     @commands.command()
@@ -324,7 +324,7 @@ class Music(commands.Cog):
         player: Player = ctx.voice_client
         if not player:
             return
-            
+
         player.autoplay = not player.autoplay
         await ctx.send(f"Autoplay is now **{'on' if player.autoplay else 'off'}**")
 
@@ -333,8 +333,8 @@ class Music(commands.Cog):
         """Moves a track's position in the queue (e.g., !move 5 1)."""
         player: Player = ctx.voice_client
         if not player or player.queue.is_empty:
-             return await ctx.send("The queue is empty.")
-             
+            return await ctx.send("The queue is empty.")
+
         try:
             player.queue.move(from_index - 1, to_index - 1)
             await ctx.send(f"Moved track from #{from_index} to #{to_index}.")
@@ -347,7 +347,7 @@ class Music(commands.Cog):
         player: Player = ctx.voice_client
         if not player:
             return
-            
+
         removed = player.queue.remove_duplicates()
         await ctx.send(f"All cleaned up! Removed **{removed}** duplicate tracks.")
 
@@ -360,7 +360,7 @@ class Music(commands.Cog):
 
         preset = preset.lower()
         await player.reset_filters()
-        
+
         if preset == "off":
             return await ctx.send("Filters cleared.")
 
@@ -371,7 +371,7 @@ class Music(commands.Cog):
             "boost": pomice.Equalizer.boost(),
             "nightcore": pomice.Timescale.nightcore(),
             "vaporwave": pomice.Timescale.vaporwave(),
-            "bass": pomice.Equalizer.bass_boost_light()
+            "bass": pomice.Equalizer.bass_boost_light(),
         }
 
         if preset not in presets:

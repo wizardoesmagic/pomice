@@ -69,6 +69,7 @@ class TrackInvalidPosition(PomiceException):
 
 class TrackLoadError(PomiceException):
     """There was an error while loading a track."""
+
     def __init__(self, message: str = "Sorry, I ran into trouble trying to load that track."):
         super().__init__(message)
 
@@ -111,13 +112,17 @@ class QueueException(Exception):
 
 class QueueFull(QueueException):
     """Exception raised when attempting to add to a full Queue."""
+
     def __init__(self, message: str = "Whoops! The queue is completely full right now."):
         super().__init__(message)
 
 
 class QueueEmpty(QueueException):
     """Exception raised when attempting to retrieve from an empty Queue."""
-    def __init__(self, message: str = "It looks like the queue is empty. There's no more music to play!"):
+
+    def __init__(
+        self, message: str = "It looks like the queue is empty. There's no more music to play!",
+    ):
         super().__init__(message)
 
 

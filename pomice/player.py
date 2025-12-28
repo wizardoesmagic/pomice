@@ -776,7 +776,7 @@ class Player(VoiceProtocol):
     async def do_next(self) -> Optional[Track]:
         """Automatically picks the next track from the queue and plays it.
         If the queue is empty and autoplay is on, it will search for recommended tracks.
-        
+
         Returns
         -------
         Optional[Track]
@@ -790,7 +790,7 @@ class Player(VoiceProtocol):
                         track = recommendations.tracks[0]
                     else:
                         track = recommendations[0]
-                    
+
                     await self.play(track)
                     return track
             return None

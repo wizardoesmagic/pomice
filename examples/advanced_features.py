@@ -104,7 +104,9 @@ class IntegratedMusic(commands.Cog):
             return await ctx.send("Queue is empty.")
 
         pomice.PlaylistManager.export_queue(
-            player.queue, f"playlists/{filename}", name=f"{ctx.guild.name}'s Playlist",
+            player.queue,
+            f"playlists/{filename}",
+            name=f"{ctx.guild.name}'s Playlist",
         )
         await ctx.send(f"✅ Queue exported to `playlists/{filename}`")
 
