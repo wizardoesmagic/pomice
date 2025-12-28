@@ -103,10 +103,14 @@ class AdvancedMusic(commands.Cog):
 
         embed.add_field(name="Total Tracks", value=summary["total_tracks"], inline=True)
         embed.add_field(
-            name="Total Duration", value=summary["total_duration_formatted"], inline=True,
+            name="Total Duration",
+            value=summary["total_duration_formatted"],
+            inline=True,
         )
         embed.add_field(
-            name="Average Duration", value=summary["average_duration_formatted"], inline=True,
+            name="Average Duration",
+            value=summary["average_duration_formatted"],
+            inline=True,
         )
 
         if summary["longest_track"]:
@@ -222,7 +226,9 @@ class AdvancedMusic(commands.Cog):
             if "-" in value:
                 min_dur, max_dur = map(int, value.split("-"))
                 filtered = pomice.TrackFilter.by_duration(
-                    queue_tracks, min_duration=min_dur, max_duration=max_dur,
+                    queue_tracks,
+                    min_duration=min_dur,
+                    max_duration=max_dur,
                 )
             else:
                 return await ctx.send("Duration format: min-max (in milliseconds)")
@@ -233,7 +239,8 @@ class AdvancedMusic(commands.Cog):
             return await ctx.send("No tracks match the filter.")
 
         embed = discord.Embed(
-            title=f"🔍 Filtered Results ({len(filtered)} tracks)", color=discord.Color.purple(),
+            title=f"🔍 Filtered Results ({len(filtered)} tracks)",
+            color=discord.Color.purple(),
         )
 
         for i, track in enumerate(filtered[:10], 1):

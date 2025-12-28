@@ -403,22 +403,22 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.history = pomice.TrackHistory(max_size=100)
-    
+
     @commands.Cog.listener()
     async def on_pomice_track_end(self, player, track, _):
         # Add to history when track ends
         self.history.add(track)
-    
+
     @commands.command()
     async def history(self, ctx, limit: int = 10):
         """Show recently played tracks."""
         recent = self.history.get_last(limit)
-        
+
         tracks_list = '\n'.join(
             f"{i}. {track.title} by {track.author}"
             for i, track in enumerate(recent, 1)
         )
-        
+
         await ctx.send(f"**Recently Played:**\n{tracks_list}")
 ```
 
@@ -431,20 +431,20 @@ async def stats(self, ctx):
     player = ctx.voice_client
     stats = pomice.QueueStats(player.queue)
     summary = stats.get_summary()
-    
+
     embed = discord.Embed(title='📊 Queue Statistics', color=discord.Color.green())
-    
+
     embed.add_field(name='Total Tracks', value=summary['total_tracks'], inline=True)
     embed.add_field(name='Total Duration', value=summary['total_duration_formatted'], inline=True)
     embed.add_field(name='Average Duration', value=summary['average_duration_formatted'], inline=True)
-    
+
     if summary['longest_track']:
         embed.add_field(
             name='Longest Track',
             value=f"{summary['longest_track'].title} ({stats.format_duration(summary['longest_track'].length)})",
             inline=False
         )
-    
+
     # Top requesters
     top_requesters = stats.get_top_requesters(3)
     if top_requesters:
@@ -453,7 +453,7 @@ async def stats(self, ctx):
             for i, (req, count) in enumerate(top_requesters, 1)
         )
         embed.add_field(name='Top Requesters', value=requesters_text, inline=False)
-    
+
     await ctx.send(embed=embed)
 ```
 
@@ -464,7 +464,7 @@ async def stats(self, ctx):
 async def export(self, ctx, filename: str = 'playlist.json'):
     """Export current queue to a file."""
     player = ctx.voice_client
-    
+
     pomice.PlaylistManager.export_queue(
         player.queue,
         f'playlists/{filename}',
@@ -477,17 +477,17 @@ async def export(self, ctx, filename: str = 'playlist.json'):
 async def import_playlist(self, ctx, filename: str):
     """Import a playlist from a file."""
     player = ctx.voice_client
-    
+
     data = pomice.PlaylistManager.import_playlist(f'playlists/{filename}')
     uris = [track['uri'] for track in data['tracks'] if track.get('uri')]
-    
+
     added = 0
     for uri in uris:
         results = await player.get_tracks(query=uri, ctx=ctx)
         if results:
             await player.queue.put(results[0])
             added += 1
-    
+
     await ctx.send(f'✅ Imported {added} tracks from `{data["name"]}`')
 ```
 
@@ -499,12 +499,12 @@ async def filter_short(self, ctx):
     """Show tracks shorter than 3 minutes."""
     player = ctx.voice_client
     tracks = list(player.queue)
-    
+
     short_tracks = pomice.TrackFilter.by_duration(
         tracks,
         max_duration=180000  # 3 minutes in ms
     )
-    
+
     await ctx.send(f'Found {len(short_tracks)} tracks under 3 minutes!')
 
 @commands.command()
@@ -512,7 +512,7 @@ async def sort_queue(self, ctx, sort_by: str = 'duration'):
     """Sort the queue by duration, title, or author."""
     player = ctx.voice_client
     queue_tracks = list(player.queue)
-    
+
     if sort_by == 'duration':
         sorted_tracks = pomice.SearchHelper.sort_by_duration(queue_tracks)
     elif sort_by == 'title':
@@ -521,12 +521,12 @@ async def sort_queue(self, ctx, sort_by: str = 'duration'):
         sorted_tracks = pomice.SearchHelper.sort_by_author(queue_tracks)
     else:
         return await ctx.send('Valid options: duration, title, author')
-    
+
     # Clear and refill queue
     player.queue._queue.clear()
     for track in sorted_tracks:
         await player.queue.put(track)
-    
+
     await ctx.send(f'✅ Queue sorted by {sort_by}')
 ```
 
