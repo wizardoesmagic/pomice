@@ -372,3 +372,14 @@ class Queue(Iterable[Track]):
         else:
             new_queue = self._queue[index : self.size]
             self._queue = new_queue
+
+    def get_stats(self) -> "pomice.QueueStats":
+        """Get detailed statistics for this queue.
+        
+        Returns
+        -------
+        QueueStats
+            A QueueStats object containing detailed analytics.
+        """
+        from .queue_stats import QueueStats
+        return QueueStats(self)

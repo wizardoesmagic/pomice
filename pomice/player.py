@@ -28,9 +28,9 @@ from .filters import Filter
 from .filters import Timescale
 from .objects import Playlist
 from .objects import Track
-from .pool import Node
-from .pool import NodePool
-from pomice.utils import LavalinkVersion
+from .history import TrackHistory
+from .queue_stats import QueueStats
+from .queue import Queue
 
 if TYPE_CHECKING:
     from discord.types.voice import VoiceServerUpdate
@@ -154,6 +154,8 @@ class Player(VoiceProtocol):
         "_log",
         "_voice_state",
         "_player_endpoint_uri",
+        "queue",
+        "history",
     )
 
     def __call__(self, client: Client, channel: VoiceChannel) -> Player:
@@ -190,6 +192,9 @@ class Player(VoiceProtocol):
         self._voice_state: dict = {}
 
         self._player_endpoint_uri: str = f"sessions/{self._node._session_id}/players"
+        
+        self.queue: Queue = Queue()
+        self.history: TrackHistory = TrackHistory()
 
     def __repr__(self) -> str:
         return (
@@ -358,6 +363,8 @@ class Player(VoiceProtocol):
         event: PomiceEvent = getattr(events, event_type)(data, self)
 
         if isinstance(event, TrackEndEvent) and event.reason not in ("REPLACED", "replaced"):
+            if self._current:
+                self.history.add(self._current)
             self._current = None
 
         event.dispatch(self._bot)
@@ -763,3 +770,28 @@ class Player(VoiceProtocol):
             if self._log:
                 self._log.debug(f"Fast apply passed, now removing all filters instantly.")
             await self.seek(self.position)
+
+    async def do_next(self) -> Optional[Track]:
+        """Automatically plays the next track from the queue.
+        
+        Returns
+        -------
+        Optional[Track]
+            The track that is now playing, or None if the queue is empty.
+        """
+        if self.queue.is_empty:
+            return None
+            
+        track = self.queue.get()
+        await self.play(track)
+        return track
+
+    def get_stats(self) -> QueueStats:
+        """Get detailed statistics for the current player and queue.
+        
+        Returns
+        -------
+        QueueStats
+            A QueueStats object containing detailed analytics.
+        """
+        return QueueStats(self.queue)
