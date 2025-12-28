@@ -1,13 +1,28 @@
-# Pomice Advanced Features
+# Pomice Advanced Features Guide
 
-This document describes the new advanced features added to Pomice to enhance your music bot capabilities.
+## 🎉 Overview
+
+This guide covers the advanced features added to Pomice to enhance your music bot capabilities. These features include track history, queue statistics, playlist management, and advanced track utilities.
+
+### What's New
+
+- **Track History**: Keep track of previously played songs with navigation and search
+- **Queue Statistics**: Detailed analytics about queue contents (duration, requesters, etc.)
+- **Playlist Manager**: Export/import playlists to JSON and M3U formats
+- **Track Utilities**: Advanced filtering, searching, and sorting capabilities
+
+All features are **fully backward compatible** and **optional** - use what you need!
+
+---
 
 ## 📚 Table of Contents
 
-1. [Track History](#track-history)
-2. [Queue Statistics](#queue-statistics)
-3. [Playlist Manager](#playlist-manager)
-4. [Track Utilities](#track-utilities)
+1. [Track History](#-track-history)
+2. [Queue Statistics](#-queue-statistics)
+3. [Playlist Manager](#-playlist-manager)
+4. [Track Utilities](#-track-utilities)
+5. [Complete Examples](#-complete-examples)
+6. [Quick Reference](#-quick-reference)
 
 ---
 
@@ -22,7 +37,7 @@ Keep track of previously played songs with navigation and search capabilities.
 - Filter by requester
 - Get unique tracks (remove duplicates)
 
-### Usage
+### Basic Usage
 
 ```python
 import pomice
@@ -57,6 +72,12 @@ history.clear()
 - `is_empty` - Check if history is empty
 - `current` - Get current track in navigation
 
+### Use Cases
+- "What was that song that just played?"
+- "Show me the last 10 songs"
+- "Play the previous track"
+- "Show all songs requested by User X"
+
 ---
 
 ## 📊 Queue Statistics
@@ -72,7 +93,7 @@ Get detailed analytics about your queue contents.
 - Stream detection
 - Playlist distribution
 
-### Usage
+### Basic Usage
 
 ```python
 import pomice
@@ -137,6 +158,12 @@ summary = stats.get_summary()
 }
 ```
 
+### Use Cases
+- "How long is the queue?"
+- "Who added the most songs?"
+- "What's the longest track?"
+- "Show me queue statistics"
+
 ---
 
 ## 💾 Playlist Manager
@@ -151,9 +178,7 @@ Export and import playlists to/from JSON and M3U formats.
 - Remove duplicates
 - Playlist metadata
 
-### Usage
-
-#### Export Queue
+### Export Queue
 ```python
 import pomice
 
@@ -167,7 +192,7 @@ pomice.PlaylistManager.export_queue(
 )
 ```
 
-#### Import Playlist
+### Import Playlist
 ```python
 # Import playlist data
 data = pomice.PlaylistManager.import_playlist('playlists/my_playlist.json')
@@ -182,7 +207,7 @@ for uri in uris:
         await player.queue.put(results[0])
 ```
 
-#### Export Track List
+### Export Track List
 ```python
 # Export a list of tracks (not from queue)
 tracks = [track1, track2, track3]
@@ -194,7 +219,7 @@ pomice.PlaylistManager.export_track_list(
 )
 ```
 
-#### Merge Playlists
+### Merge Playlists
 ```python
 # Merge multiple playlists into one
 pomice.PlaylistManager.merge_playlists(
@@ -205,7 +230,7 @@ pomice.PlaylistManager.merge_playlists(
 )
 ```
 
-#### Export to M3U
+### Export to M3U
 ```python
 # Export to M3U format (compatible with many players)
 tracks = list(player.queue)
@@ -216,7 +241,7 @@ pomice.PlaylistManager.export_to_m3u(
 )
 ```
 
-#### Get Playlist Info
+### Get Playlist Info
 ```python
 # Get metadata without loading all tracks
 info = pomice.PlaylistManager.get_playlist_info('playlists/my_playlist.json')
@@ -247,6 +272,12 @@ info = pomice.PlaylistManager.get_playlist_info('playlists/my_playlist.json')
   ]
 }
 ```
+
+### Use Cases
+- "Save this queue for later"
+- "Load my favorite playlist"
+- "Merge all my playlists"
+- "Export to M3U for my media player"
 
 ---
 
@@ -351,13 +382,18 @@ grouped = pomice.SearchHelper.group_by_playlist(tracks)
 random_tracks = pomice.SearchHelper.get_random_tracks(tracks, count=5)
 ```
 
+### Use Cases
+- "Show me all songs by Artist X"
+- "Find tracks between 3-5 minutes"
+- "Sort queue by duration"
+- "Remove duplicate songs"
+- "Play 5 random tracks"
+
 ---
 
-## 🎯 Complete Example
+## 🎯 Complete Examples
 
-See `examples/advanced_features.py` for a complete bot example using all these features.
-
-### Quick Example
+### Example 1: Basic Music Bot with History
 
 ```python
 import pomice
@@ -367,44 +403,182 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.history = pomice.TrackHistory(max_size=100)
-
+    
+    @commands.Cog.listener()
+    async def on_pomice_track_end(self, player, track, _):
+        # Add to history when track ends
+        self.history.add(track)
+    
     @commands.command()
-    async def stats(self, ctx):
-        """Show queue statistics."""
-        player = ctx.voice_client
-        stats = pomice.QueueStats(player.queue)
-        summary = stats.get_summary()
-
-        await ctx.send(
-            f"**Queue Stats**\n"
-            f"Tracks: {summary['total_tracks']}\n"
-            f"Duration: {summary['total_duration_formatted']}\n"
-            f"Streams: {summary['stream_count']}"
+    async def history(self, ctx, limit: int = 10):
+        """Show recently played tracks."""
+        recent = self.history.get_last(limit)
+        
+        tracks_list = '\n'.join(
+            f"{i}. {track.title} by {track.author}"
+            for i, track in enumerate(recent, 1)
         )
+        
+        await ctx.send(f"**Recently Played:**\n{tracks_list}")
+```
 
-    @commands.command()
-    async def export(self, ctx):
-        """Export queue to file."""
-        player = ctx.voice_client
-        pomice.PlaylistManager.export_queue(
-            player.queue,
-            'my_playlist.json',
-            name=f"{ctx.guild.name}'s Queue"
+### Example 2: Queue Statistics Command
+
+```python
+@commands.command()
+async def stats(self, ctx):
+    """Show queue statistics."""
+    player = ctx.voice_client
+    stats = pomice.QueueStats(player.queue)
+    summary = stats.get_summary()
+    
+    embed = discord.Embed(title='📊 Queue Statistics', color=discord.Color.green())
+    
+    embed.add_field(name='Total Tracks', value=summary['total_tracks'], inline=True)
+    embed.add_field(name='Total Duration', value=summary['total_duration_formatted'], inline=True)
+    embed.add_field(name='Average Duration', value=summary['average_duration_formatted'], inline=True)
+    
+    if summary['longest_track']:
+        embed.add_field(
+            name='Longest Track',
+            value=f"{summary['longest_track'].title} ({stats.format_duration(summary['longest_track'].length)})",
+            inline=False
         )
-        await ctx.send('✅ Queue exported!')
-
-    @commands.command()
-    async def filter_long(self, ctx):
-        """Show tracks longer than 5 minutes."""
-        player = ctx.voice_client
-        tracks = list(player.queue)
-
-        long_tracks = pomice.TrackFilter.by_duration(
-            tracks,
-            min_duration=300000  # 5 minutes
+    
+    # Top requesters
+    top_requesters = stats.get_top_requesters(3)
+    if top_requesters:
+        requesters_text = '\n'.join(
+            f'{i}. {req.display_name}: {count} tracks'
+            for i, (req, count) in enumerate(top_requesters, 1)
         )
+        embed.add_field(name='Top Requesters', value=requesters_text, inline=False)
+    
+    await ctx.send(embed=embed)
+```
 
-        await ctx.send(f'Found {len(long_tracks)} long tracks!')
+### Example 3: Export/Import Playlists
+
+```python
+@commands.command()
+async def export(self, ctx, filename: str = 'playlist.json'):
+    """Export current queue to a file."""
+    player = ctx.voice_client
+    
+    pomice.PlaylistManager.export_queue(
+        player.queue,
+        f'playlists/{filename}',
+        name=f"{ctx.guild.name}'s Playlist",
+        description=f'Exported from {ctx.guild.name}'
+    )
+    await ctx.send(f'✅ Queue exported to `playlists/{filename}`')
+
+@commands.command()
+async def import_playlist(self, ctx, filename: str):
+    """Import a playlist from a file."""
+    player = ctx.voice_client
+    
+    data = pomice.PlaylistManager.import_playlist(f'playlists/{filename}')
+    uris = [track['uri'] for track in data['tracks'] if track.get('uri')]
+    
+    added = 0
+    for uri in uris:
+        results = await player.get_tracks(query=uri, ctx=ctx)
+        if results:
+            await player.queue.put(results[0])
+            added += 1
+    
+    await ctx.send(f'✅ Imported {added} tracks from `{data["name"]}`')
+```
+
+### Example 4: Filter and Sort Queue
+
+```python
+@commands.command()
+async def filter_short(self, ctx):
+    """Show tracks shorter than 3 minutes."""
+    player = ctx.voice_client
+    tracks = list(player.queue)
+    
+    short_tracks = pomice.TrackFilter.by_duration(
+        tracks,
+        max_duration=180000  # 3 minutes in ms
+    )
+    
+    await ctx.send(f'Found {len(short_tracks)} tracks under 3 minutes!')
+
+@commands.command()
+async def sort_queue(self, ctx, sort_by: str = 'duration'):
+    """Sort the queue by duration, title, or author."""
+    player = ctx.voice_client
+    queue_tracks = list(player.queue)
+    
+    if sort_by == 'duration':
+        sorted_tracks = pomice.SearchHelper.sort_by_duration(queue_tracks)
+    elif sort_by == 'title':
+        sorted_tracks = pomice.SearchHelper.sort_by_title(queue_tracks)
+    elif sort_by == 'author':
+        sorted_tracks = pomice.SearchHelper.sort_by_author(queue_tracks)
+    else:
+        return await ctx.send('Valid options: duration, title, author')
+    
+    # Clear and refill queue
+    player.queue._queue.clear()
+    for track in sorted_tracks:
+        await player.queue.put(track)
+    
+    await ctx.send(f'✅ Queue sorted by {sort_by}')
+```
+
+---
+
+## 📖 Quick Reference
+
+### Track History
+```python
+history = pomice.TrackHistory(max_size=100)
+history.add(track)
+recent = history.get_last(10)
+results = history.search("query")
+previous = history.get_previous()
+unique = history.get_unique_tracks()
+```
+
+### Queue Statistics
+```python
+stats = pomice.QueueStats(queue)
+total = stats.total_duration
+formatted = stats.format_duration(total)
+top_users = stats.get_top_requesters(5)
+summary = stats.get_summary()
+```
+
+### Playlist Manager
+```python
+# Export
+pomice.PlaylistManager.export_queue(queue, 'playlist.json')
+
+# Import
+data = pomice.PlaylistManager.import_playlist('playlist.json')
+
+# Merge
+pomice.PlaylistManager.merge_playlists(['p1.json', 'p2.json'], 'merged.json')
+
+# M3U
+pomice.PlaylistManager.export_to_m3u(tracks, 'playlist.m3u')
+```
+
+### Track Utilities
+```python
+# Filter
+short = pomice.TrackFilter.by_duration(tracks, max_duration=180000)
+artist = pomice.TrackFilter.by_author(tracks, "Artist Name")
+
+# Search & Sort
+results = pomice.SearchHelper.search_tracks(tracks, "query")
+sorted_tracks = pomice.SearchHelper.sort_by_duration(tracks)
+unique = pomice.SearchHelper.remove_duplicates(tracks)
+random = pomice.SearchHelper.get_random_tracks(tracks, 5)
 ```
 
 ---
@@ -412,14 +586,37 @@ class Music(commands.Cog):
 ## 📝 Notes
 
 - All duration values are in **milliseconds**
-- History is per-guild (you should maintain separate histories for each guild)
+- History should be maintained per-guild
 - Exported playlists are in JSON format by default
 - M3U export is compatible with most media players
 - All utilities work with standard Pomice Track objects
 
-## 🤝 Contributing
+---
 
-Feel free to suggest more features or improvements!
+## 🚀 Getting Started
+
+1. **Import the features you need**:
+   ```python
+   import pomice
+   ```
+
+2. **Use them in your commands**:
+   ```python
+   history = pomice.TrackHistory()
+   stats = pomice.QueueStats(player.queue)
+   ```
+
+3. **Check the examples** in `examples/advanced_features.py` for a complete bot
+
+4. **Experiment** and customize to fit your needs!
+
+---
+
+## 🎓 Additional Resources
+
+- **Full Example Bot**: See `examples/advanced_features.py`
+- **Main Documentation**: See the main Pomice README
+- **Discord Support**: Join the Pomice Discord server
 
 ---
 
