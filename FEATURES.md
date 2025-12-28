@@ -169,22 +169,22 @@ from discord.ext import commands
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-    
+
     @commands.command()
     async def play(self, ctx, *, search: str):
         if not ctx.voice_client:
             await ctx.author.voice.channel.connect(cls=pomice.Player)
-        
+
         player = ctx.voice_client
         results = await player.get_tracks(query=search, ctx=ctx)
-        
+
         if not results:
             return await ctx.send("No results.")
-            
+
         track = results[0]
         player.queue.put(track)
         await ctx.send(f"Added **{track.title}** to queue.")
-        
+
         if not player.is_playing:
             await player.do_next()
 
@@ -193,7 +193,7 @@ class Music(commands.Cog):
         """Show recently played songs."""
         player = ctx.voice_client
         recent = player.history.get_last(5)
-        
+
         msg = "\n".join(f"{i}. {t.title}" for i, t in enumerate(recent, 1))
         await ctx.send(f"**Recently Played:**\n{msg}")
 
@@ -202,7 +202,7 @@ class Music(commands.Cog):
         """Show queue analytics."""
         stats = ctx.voice_client.get_stats()
         summary = stats.get_summary()
-        
+
         await ctx.send(
             f"**Queue Stats**\n"
             f"Tracks: {summary['total_tracks']}\n"

@@ -26,11 +26,11 @@ from .exceptions import TrackInvalidPosition
 from .exceptions import TrackLoadError
 from .filters import Filter
 from .filters import Timescale
+from .history import TrackHistory
 from .objects import Playlist
 from .objects import Track
-from .history import TrackHistory
-from .queue_stats import QueueStats
 from .queue import Queue
+from .queue_stats import QueueStats
 
 if TYPE_CHECKING:
     from discord.types.voice import VoiceServerUpdate
@@ -192,7 +192,7 @@ class Player(VoiceProtocol):
         self._voice_state: dict = {}
 
         self._player_endpoint_uri: str = f"sessions/{self._node._session_id}/players"
-        
+
         self.queue: Queue = Queue()
         self.history: TrackHistory = TrackHistory()
 
@@ -773,7 +773,7 @@ class Player(VoiceProtocol):
 
     async def do_next(self) -> Optional[Track]:
         """Automatically plays the next track from the queue.
-        
+
         Returns
         -------
         Optional[Track]
@@ -781,14 +781,14 @@ class Player(VoiceProtocol):
         """
         if self.queue.is_empty:
             return None
-            
+
         track = self.queue.get()
         await self.play(track)
         return track
 
     def get_stats(self) -> QueueStats:
         """Get detailed statistics for the current player and queue.
-        
+
         Returns
         -------
         QueueStats
