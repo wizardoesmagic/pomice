@@ -287,7 +287,7 @@ class Client:
         # Fetch pages in rolling waves; yield promptly as soon as a wave completes.
         wave_size = self._playlist_concurrency * 2
         remaining_offsets_list = list(remaining_offsets)
-        
+
         for i in range(0, len(remaining_offsets_list), wave_size):
             wave_offsets = remaining_offsets_list[i : i + wave_size]
             results = await asyncio.gather(*[fetch(o) for o in wave_offsets])
