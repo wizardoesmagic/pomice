@@ -367,21 +367,21 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.history = pomice.TrackHistory(max_size=100)
-    
+
     @commands.command()
     async def stats(self, ctx):
         """Show queue statistics."""
         player = ctx.voice_client
         stats = pomice.QueueStats(player.queue)
         summary = stats.get_summary()
-        
+
         await ctx.send(
             f"**Queue Stats**\n"
             f"Tracks: {summary['total_tracks']}\n"
             f"Duration: {summary['total_duration_formatted']}\n"
             f"Streams: {summary['stream_count']}"
         )
-    
+
     @commands.command()
     async def export(self, ctx):
         """Export queue to file."""
@@ -392,18 +392,18 @@ class Music(commands.Cog):
             name=f"{ctx.guild.name}'s Queue"
         )
         await ctx.send('✅ Queue exported!')
-    
+
     @commands.command()
     async def filter_long(self, ctx):
         """Show tracks longer than 5 minutes."""
         player = ctx.voice_client
         tracks = list(player.queue)
-        
+
         long_tracks = pomice.TrackFilter.by_duration(
             tracks,
             min_duration=300000  # 5 minutes
         )
-        
+
         await ctx.send(f'Found {len(long_tracks)} long tracks!')
 ```
 

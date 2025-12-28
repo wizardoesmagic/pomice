@@ -13,7 +13,7 @@ __all__ = ("TrackHistory",)
 
 class TrackHistory:
     """Track history manager for Pomice.
-    
+
     Keeps track of previously played tracks with a configurable maximum size.
     Useful for implementing 'previous track' functionality and viewing play history.
     """
@@ -22,7 +22,7 @@ class TrackHistory:
 
     def __init__(self, max_size: int = 100) -> None:
         """Initialize the track history.
-        
+
         Parameters
         ----------
         max_size: int
@@ -46,7 +46,7 @@ class TrackHistory:
 
     def __getitem__(self, index: int) -> Track:
         """Get a track at the given index in history.
-        
+
         Parameters
         ----------
         index: int
@@ -59,7 +59,7 @@ class TrackHistory:
 
     def add(self, track: Track) -> None:
         """Add a track to the history.
-        
+
         Parameters
         ----------
         track: Track
@@ -70,12 +70,12 @@ class TrackHistory:
 
     def get_last(self, count: int = 1) -> List[Track]:
         """Get the last N tracks from history.
-        
+
         Parameters
         ----------
         count: int
             Number of tracks to retrieve. Defaults to 1.
-            
+
         Returns
         -------
         List[Track]
@@ -87,7 +87,7 @@ class TrackHistory:
 
     def get_previous(self) -> Optional[Track]:
         """Get the previous track in history.
-        
+
         Returns
         -------
         Optional[Track]
@@ -95,13 +95,13 @@ class TrackHistory:
         """
         if not self._history or self._current_index <= 0:
             return None
-        
+
         self._current_index -= 1
         return self._history[self._current_index]
 
     def get_next(self) -> Optional[Track]:
         """Get the next track in history (when navigating backwards).
-        
+
         Returns
         -------
         Optional[Track]
@@ -109,7 +109,7 @@ class TrackHistory:
         """
         if not self._history or self._current_index >= len(self._history) - 1:
             return None
-        
+
         self._current_index += 1
         return self._history[self._current_index]
 
@@ -120,7 +120,7 @@ class TrackHistory:
 
     def get_all(self) -> List[Track]:
         """Get all tracks in history.
-        
+
         Returns
         -------
         List[Track]
@@ -130,12 +130,12 @@ class TrackHistory:
 
     def search(self, query: str) -> List[Track]:
         """Search for tracks in history by title or author.
-        
+
         Parameters
         ----------
         query: str
             Search query (case-insensitive)
-            
+
         Returns
         -------
         List[Track]
@@ -143,13 +143,14 @@ class TrackHistory:
         """
         query_lower = query.lower()
         return [
-            track for track in reversed(self._history)
+            track
+            for track in reversed(self._history)
             if query_lower in track.title.lower() or query_lower in track.author.lower()
         ]
 
     def get_unique_tracks(self) -> List[Track]:
         """Get unique tracks from history (removes duplicates).
-        
+
         Returns
         -------
         List[Track]
@@ -165,19 +166,20 @@ class TrackHistory:
 
     def get_by_requester(self, requester_id: int) -> List[Track]:
         """Get all tracks requested by a specific user.
-        
+
         Parameters
         ----------
         requester_id: int
             Discord user ID
-            
+
         Returns
         -------
         List[Track]
             Tracks requested by the user (most recent first)
         """
         return [
-            track for track in reversed(self._history)
+            track
+            for track in reversed(self._history)
             if track.requester and track.requester.id == requester_id
         ]
 

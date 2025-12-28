@@ -13,7 +13,7 @@ __all__ = ("TrackFilter", "SearchHelper")
 
 class TrackFilter:
     """Advanced filtering utilities for tracks.
-    
+
     Provides various filter functions to find tracks matching specific criteria.
     """
 
@@ -25,7 +25,7 @@ class TrackFilter:
         max_duration: Optional[int] = None,
     ) -> List[Track]:
         """Filter tracks by duration range.
-        
+
         Parameters
         ----------
         tracks: List[Track]
@@ -34,26 +34,26 @@ class TrackFilter:
             Minimum duration in milliseconds
         max_duration: Optional[int]
             Maximum duration in milliseconds
-            
+
         Returns
         -------
         List[Track]
             Filtered tracks
         """
         result = tracks
-        
+
         if min_duration is not None:
             result = [t for t in result if t.length >= min_duration]
-        
+
         if max_duration is not None:
             result = [t for t in result if t.length <= max_duration]
-        
+
         return result
 
     @staticmethod
     def by_author(tracks: List[Track], author: str, *, exact: bool = False) -> List[Track]:
         """Filter tracks by author name.
-        
+
         Parameters
         ----------
         tracks: List[Track]
@@ -62,7 +62,7 @@ class TrackFilter:
             Author name to search for
         exact: bool
             Whether to match exactly. Defaults to False (case-insensitive contains).
-            
+
         Returns
         -------
         List[Track]
@@ -70,14 +70,14 @@ class TrackFilter:
         """
         if exact:
             return [t for t in tracks if t.author == author]
-        
+
         author_lower = author.lower()
         return [t for t in tracks if author_lower in t.author.lower()]
 
     @staticmethod
     def by_title(tracks: List[Track], title: str, *, exact: bool = False) -> List[Track]:
         """Filter tracks by title.
-        
+
         Parameters
         ----------
         tracks: List[Track]
@@ -86,7 +86,7 @@ class TrackFilter:
             Title to search for
         exact: bool
             Whether to match exactly. Defaults to False (case-insensitive contains).
-            
+
         Returns
         -------
         List[Track]
@@ -94,21 +94,21 @@ class TrackFilter:
         """
         if exact:
             return [t for t in tracks if t.title == title]
-        
+
         title_lower = title.lower()
         return [t for t in tracks if title_lower in t.title.lower()]
 
     @staticmethod
     def by_requester(tracks: List[Track], requester_id: int) -> List[Track]:
         """Filter tracks by requester.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks to filter
         requester_id: int
             Discord user ID
-            
+
         Returns
         -------
         List[Track]
@@ -119,34 +119,31 @@ class TrackFilter:
     @staticmethod
     def by_playlist(tracks: List[Track], playlist_name: str) -> List[Track]:
         """Filter tracks by playlist name.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks to filter
         playlist_name: str
             Playlist name to search for
-            
+
         Returns
         -------
         List[Track]
             Filtered tracks
         """
         playlist_lower = playlist_name.lower()
-        return [
-            t for t in tracks
-            if t.playlist and playlist_lower in t.playlist.name.lower()
-        ]
+        return [t for t in tracks if t.playlist and playlist_lower in t.playlist.name.lower()]
 
     @staticmethod
     def streams_only(tracks: List[Track]) -> List[Track]:
         """Filter to only include streams.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks to filter
-            
+
         Returns
         -------
         List[Track]
@@ -157,12 +154,12 @@ class TrackFilter:
     @staticmethod
     def non_streams_only(tracks: List[Track]) -> List[Track]:
         """Filter to exclude streams.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks to filter
-            
+
         Returns
         -------
         List[Track]
@@ -173,14 +170,14 @@ class TrackFilter:
     @staticmethod
     def custom(tracks: List[Track], predicate: Callable[[Track], bool]) -> List[Track]:
         """Filter tracks using a custom predicate function.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks to filter
         predicate: Callable[[Track], bool]
             Function that returns True for tracks to include
-            
+
         Returns
         -------
         List[Track]
@@ -202,7 +199,7 @@ class SearchHelper:
         case_sensitive: bool = False,
     ) -> List[Track]:
         """Search tracks by query string.
-        
+
         Parameters
         ----------
         tracks: List[Track]
@@ -215,7 +212,7 @@ class SearchHelper:
             Whether to search in authors. Defaults to True.
         case_sensitive: bool
             Whether search is case-sensitive. Defaults to False.
-            
+
         Returns
         -------
         List[Track]
@@ -223,17 +220,17 @@ class SearchHelper:
         """
         if not case_sensitive:
             query = query.lower()
-        
+
         results = []
         for track in tracks:
             title = track.title if case_sensitive else track.title.lower()
             author = track.author if case_sensitive else track.author.lower()
-            
+
             if search_title and query in title:
                 results.append(track)
             elif search_author and query in author:
                 results.append(track)
-        
+
         return results
 
     @staticmethod
@@ -243,14 +240,14 @@ class SearchHelper:
         reverse: bool = False,
     ) -> List[Track]:
         """Sort tracks by duration.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks to sort
         reverse: bool
             If True, sort longest to shortest. Defaults to False.
-            
+
         Returns
         -------
         List[Track]
@@ -265,14 +262,14 @@ class SearchHelper:
         reverse: bool = False,
     ) -> List[Track]:
         """Sort tracks alphabetically by title.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks to sort
         reverse: bool
             If True, sort Z to A. Defaults to False.
-            
+
         Returns
         -------
         List[Track]
@@ -287,14 +284,14 @@ class SearchHelper:
         reverse: bool = False,
     ) -> List[Track]:
         """Sort tracks alphabetically by author.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks to sort
         reverse: bool
             If True, sort Z to A. Defaults to False.
-            
+
         Returns
         -------
         List[Track]
@@ -310,7 +307,7 @@ class SearchHelper:
         by_title_author: bool = False,
     ) -> List[Track]:
         """Remove duplicate tracks from a list.
-        
+
         Parameters
         ----------
         tracks: List[Track]
@@ -319,7 +316,7 @@ class SearchHelper:
             Remove duplicates by URI. Defaults to True.
         by_title_author: bool
             Remove duplicates by title+author combination. Defaults to False.
-            
+
         Returns
         -------
         List[Track]
@@ -327,7 +324,7 @@ class SearchHelper:
         """
         seen = set()
         result = []
-        
+
         for track in tracks:
             if by_uri:
                 key = track.uri
@@ -335,22 +332,22 @@ class SearchHelper:
                 key = (track.title.lower(), track.author.lower())
             else:
                 key = track.track_id
-            
+
             if key not in seen:
                 seen.add(key)
                 result.append(track)
-        
+
         return result
 
     @staticmethod
     def group_by_author(tracks: List[Track]) -> dict[str, List[Track]]:
         """Group tracks by author.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks to group
-            
+
         Returns
         -------
         dict[str, List[Track]]
@@ -367,12 +364,12 @@ class SearchHelper:
     @staticmethod
     def group_by_playlist(tracks: List[Track]) -> dict[str, List[Track]]:
         """Group tracks by playlist.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks to group
-            
+
         Returns
         -------
         dict[str, List[Track]]
@@ -390,18 +387,19 @@ class SearchHelper:
     @staticmethod
     def get_random_tracks(tracks: List[Track], count: int) -> List[Track]:
         """Get random tracks from a list.
-        
+
         Parameters
         ----------
         tracks: List[Track]
             List of tracks
         count: int
             Number of random tracks to get
-            
+
         Returns
         -------
         List[Track]
             Random tracks (without replacement)
         """
         import random
+
         return random.sample(tracks, min(count, len(tracks)))

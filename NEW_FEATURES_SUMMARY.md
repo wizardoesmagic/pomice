@@ -126,18 +126,18 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.history = pomice.TrackHistory(max_size=100)
-    
+
     @commands.Cog.listener()
     async def on_pomice_track_end(self, player, track, _):
         # Add to history when track ends
         self.history.add(track)
-    
+
     @commands.command()
     async def stats(self, ctx):
         """Show queue statistics."""
         stats = pomice.QueueStats(ctx.voice_client.queue)
         summary = stats.get_summary()
-        
+
         await ctx.send(
             f"**Queue Stats**\n"
             f"📊 Tracks: {summary['total_tracks']}\n"
@@ -145,19 +145,19 @@ class Music(commands.Cog):
             f"📡 Streams: {summary['stream_count']}\n"
             f"👥 Unique Requesters: {summary['unique_requesters']}"
         )
-    
+
     @commands.command()
     async def history(self, ctx, limit: int = 10):
         """Show recently played tracks."""
         recent = self.history.get_last(limit)
-        
+
         tracks_list = '\n'.join(
             f"{i}. {track.title} by {track.author}"
             for i, track in enumerate(recent, 1)
         )
-        
+
         await ctx.send(f"**Recently Played:**\n{tracks_list}")
-    
+
     @commands.command()
     async def export(self, ctx):
         """Export current queue."""
