@@ -156,6 +156,7 @@ class Player(VoiceProtocol):
         "_player_endpoint_uri",
         "queue",
         "history",
+        "autoplay",
     )
 
     def __call__(self, client: Client, channel: VoiceChannel) -> Player:
@@ -195,6 +196,7 @@ class Player(VoiceProtocol):
 
         self.queue: Queue = Queue()
         self.history: TrackHistory = TrackHistory()
+        self.autoplay: bool = False
 
     def __repr__(self) -> str:
         return (
@@ -252,7 +254,7 @@ class Player(VoiceProtocol):
 
     @property
     def is_paused(self) -> bool:
-        """Property which returns whether or not the player has a track which is paused or not."""
+        """Returns True if the music is currently paused."""
         return self._is_connected and self._paused
 
     @property
@@ -772,14 +774,25 @@ class Player(VoiceProtocol):
             await self.seek(self.position)
 
     async def do_next(self) -> Optional[Track]:
-        """Automatically plays the next track from the queue.
-
+        """Automatically picks the next track from the queue and plays it.
+        If the queue is empty and autoplay is on, it will search for recommended tracks.
+        
         Returns
         -------
         Optional[Track]
-            The track that is now playing, or None if the queue is empty.
+            The track that's now playing, or None if we've run out of music.
         """
         if self.queue.is_empty:
+            if self.autoplay and self._current:
+                recommendations = await self.get_recommendations(track=self._current)
+                if recommendations:
+                    if isinstance(recommendations, Playlist):
+                        track = recommendations.tracks[0]
+                    else:
+                        track = recommendations[0]
+                    
+                    await self.play(track)
+                    return track
             return None
 
         track = self.queue.get()
